@@ -1,19 +1,37 @@
 const TelegramBot = require('node-telegram-bot-api');
-const http = require('http');
-
-// Cria um servidor HTTP simples para satisfazer a porta do Render
-const port = process.env.PORT || 3000;
-http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot senabot rodando com sucesso!\n');
-}).listen(port);
+const express = require('express');
 
 const token = '9034471027:AAGY36QWHIPDFCtXD1JaqStYzrmlGg4hzLM';
+const url = 'https://senabot-fz1s.onrender.com';
+const port = process.env.PORT || 3000;
 
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token);
+const app = express();
 
-console.log("Bot senabot iniciado com sucesso!");
+app.use(express.json());
 
+// Rota de Webhook para receber mensagens do Telegram
+app.post(`/bot${token}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// Rota inicial para o Render confirmar que o serviço está online
+app.get('/', (req, res) => {
+  res.send('Bot senabot ativo via Webhook!');
+});
+
+app.listen(port, async () => {
+  console.log(`Servidor rodando na porta ${port}`);
+  try {
+    await bot.setWebHook(`${url}/bot${token}`);
+    console.log('Webhook configurado com sucesso no Telegram!');
+  } catch (err) {
+    console.error('Erro ao configurar Webhook:', err.message);
+  }
+});
+
+// Lógica de resposta do bot
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const texto = msg.text;
@@ -28,3 +46,4 @@ bot.on('message', async (msg) => {
     return bot.sendMessage(chatId, `Link recebido: ${texto}`);
   }
 });
+  
